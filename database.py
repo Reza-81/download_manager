@@ -30,6 +30,11 @@ def get_all_history():
     with connection:
         return connection.execute('SELECT * FROM history;').fetchall()
 
+def clear_history():
+    connection = sqlite3.connect('Database.db')
+    with connection:
+        connection.execute('DELETE FROM history;')
+
 def set_config(location, start_time_hour, start_time_minute, end_time_hour, end_time_minute):
     connection = sqlite3.connect('Database.db')
     with connection:

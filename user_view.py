@@ -29,6 +29,9 @@ def get_input():
         force_to_download = bool(input('/> start to download even there is an download runing? [y/n]: ').lower() == 'y')
         return ['new', url, location, force_to_download]
 
+    elif instruction == 'speed':
+        return ['speed']
+
     elif instruction == 'start_download':
         id = get_number('/> enter the id: ')
         return ['start_download', id]
@@ -49,6 +52,9 @@ def get_input():
 
     elif instruction == 'history':
         return ['history']
+
+    elif instruction == 'clear_history':
+        return ['clear_history']
 
     elif instruction == 'download_list':
         return ['download_list']
@@ -91,6 +97,9 @@ def run_the_insturction(inputs):
             if inputs[1] == thread.id:
                 thread.run_thread()
 
+    elif inputs[0] == 'speed':
+        download_manager.downloading_thread.speed()
+
     elif inputs[0] == 'delete':
         download_manager.downloading_thread.delte_by_id(inputs[1])
 
@@ -106,6 +115,9 @@ def run_the_insturction(inputs):
     elif inputs[0] == 'history':
         for i in database.get_all_history():
             print(i)
+
+    elif inputs[0] == 'clear_history':
+        database.clear_history()
 
     elif inputs[0] == 'download_list':
         download_manager.downloading_thread.show_downloading_set()
