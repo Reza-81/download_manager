@@ -8,7 +8,7 @@ def get_number(text='', min_limite=float('-inf'), max_limite=float('inf')):
     while(True):
         number = input(text)
         if number == '':
-            return 0
+            return min_limite
         if number.isdigit():
             number = int(number)
             if min_limite <= number <= max_limite:
@@ -67,15 +67,9 @@ def get_input():
         if location == '':
             location = database.get_config()[1]
         start_time_hour = get_number('/> enter the start time (hour): ', 0, 23)
-        if start_time_hour:
-            start_time_minute = get_number('/> enter the start time (minute): ', 0, 59)
-        else:
-            start_time_minute = None
+        start_time_minute = get_number('/> enter the start time (minute): ', 0, 59)
         end_time_hour = get_number('/> enter the end time (hour): ', 0, 23)
-        if end_time_hour:
-            end_time_minute = get_number('/> enter the end time (minute): ', 0, 59)
-        else:
-            end_time_minute = None
+        end_time_minute = get_number('/> enter the end time (minute): ', 0, 59)
         return ['set_config', location, start_time_hour, start_time_minute, end_time_hour, end_time_minute]
 
     elif instruction == 'reset_config':

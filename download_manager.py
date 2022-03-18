@@ -4,6 +4,7 @@ from threading import Timer
 from datetime import datetime
 import time
 import database
+import cgi
 import os
 #_______________________________________________________________________________________________________________________
 
@@ -20,10 +21,12 @@ class downloading_thread():
     download_speed = 0
 
     def __init__(self, url, location, start_time_hour, start_time_minute, end_time_hour, end_time_minute, force_to_run):
+        temp_request = requests.get(url, stream=True)
         self.id = downloading_thread.ID
         downloading_thread.ID += 1
         self.url = url
-        self.size = int(requests.get(url, stream=True).headers.get('content-length')) * 0.000001
+        self.file_name = downloading_thread.get_file_name(temp_request)
+        self.size = int(temp_request.headers.get('content-length')) * 0.000001
         self.location = location
         self.stop_flag = False
         self.started = False
@@ -48,39 +51,35 @@ class downloading_thread():
 
     def download(self):
         chunk_length = 0.032768 # 32 * 1024 mega byte
-        downloaded_length = 0
-        file_name = self.url.rsplit("/", 1)[1]
-        database.add_to_history(str(datetime.now()), file_name, self.url, self.location)
-        if Path(self.location + '/' + file_name).is_file():
+        database.add_to_history(str(datetime.now()), self.file_name, self.url, self.location)
+        if Path(self.location + '/' + self.file_name).is_file():
             print(self.url, ' resuming...')
-            path = Path(self.location + '/' + file_name)
+            path = Path(self.location + '/' + self.file_name)
             resume_header = ({'Range': f'bytes={path.stat().st_size}-'})
             try:
                 download_request = requests.get(self.url, stream=True, headers=resume_header)
-                with open(self.location + '/' + file_name, 'ab') as file:
+                with open(self.location + '/' + self.file_name, 'ab') as file:
                     start = time.time()
                     for chunk in download_request.iter_content(int(chunk_length * 1000000)):
                         if self.stop_flag:
                             return
                         file.write(chunk)
-                        downloaded_length += chunk_length
-                        downloading_thread.download_speed = downloaded_length/(time.time() - start)
-                    print('')
+                        downloading_thread.download_speed = chunk_length/(time.time() - start + 0.000001)
+                        start = time.time()
             except Exception as e:
                 print(e)
         else:
             print(self.url, ' started...')
             try:
                 download_request = requests.get(self.url, stream=True)
-                with open(self.location + '/' + file_name, 'wb') as file:
+                with open(self.location + '/' + self.file_name, 'wb') as file:
                     start = time.time()
                     for chunk in download_request.iter_content(int(chunk_length * 1000000)):
                         if self.stop_flag:
                             return
                         file.write(chunk)
-                        downloaded_length += chunk_length
-                        downloading_thread.download_speed = downloaded_length/(time.time() - start)
-                    print('')
+                        downloading_thread.download_speed = chunk_length / (time.time() - start + 0.000001)
+                        start = time.time()
             except Exception as e:
                 print(e)
         downloading_thread.download_speed = 0
@@ -89,6 +88,14 @@ class downloading_thread():
             self.kill_thread.cancel()
         if downloading_thread.downloading_list:
             downloading_thread.downloading_list[0].run_thread()
+
+    @classmethod
+    def get_file_name(cls, request):
+        content_disposition = request.headers.get('Content-Disposition')
+        if content_disposition:
+            return cgi.parse_header(content_disposition)[1]['filename']
+        else:
+            return request.url.rsplit("/", 1)[1]
 
     def cancel(self):
         downloading_thread.download_speed = 0
@@ -139,9 +146,8 @@ class downloading_thread():
         thread = None
         print('------------------------------------------------------------------------')
         for thread in downloading_thread.downloading_list:
-            file_name = thread.url.rsplit("/", 1)[1]
-            downloaded_size = os.path.getsize(thread.location + '/' + file_name) * 0.000001
-            print(thread.id, '\n', file_name, '\n', thread.location, '\n', thread.size
+            downloaded_size = os.path.getsize(thread.location + '/' + thread.file_name) * 0.000001
+            print(thread.id, '\n', thread.file_name, '\n', thread.location, '\n', thread.size
                   , '\n', (downloaded_size/thread.size) * 100, '\n', thread.started)
             print('------------------------------------------------------------------------')
         if not thread:
