@@ -41,6 +41,8 @@ class downloading_thread():
         downloading_thread.downloading_list.append(self)
 
     def run_thread(self):
+        if self.started:
+            return
         self.started = True
         self.stop_flag = False
         self.download_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute), self.download)
@@ -113,12 +115,6 @@ class downloading_thread():
         for thread in downloading_thread.downloading_list:
             if id == thread.id:
                 thread.cancel()
-                if downloading_thread.downloading_list:
-                    for new_thread in downloading_thread.downloading_list:
-                        if new_thread.started:
-                            return thread
-                    if downloading_thread.downloading_list[0] != thread:
-                        downloading_thread.downloading_list[0].run_thread()
                 return thread
 
     @classmethod
