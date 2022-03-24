@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 import database
 import download_manager
 #-----------------------------------------------------------------------------------------------------------------------
@@ -21,20 +22,19 @@ def get_number(text='', min_limite=float('-inf'), max_limite=float('inf')):
 def get_input():
     instruction = input('/> enter the insturction: ').lower()
 
-    if instruction == 'new':
+    if instruction == 'new' or instruction == 'new_now':
         url = input('/> enter the url: ')
         location = input('/> enter the location: ')
         if location == '':
             location = database.get_config()[1]
-        force_to_download = bool(input('/> start to download even there is an download runing? [y/n]: ').lower() == 'y')
-        return ['new', url, location, force_to_download]
+        return [instruction, url, location]
 
     elif instruction == 'speed':
         return ['speed']
 
-    elif instruction == 'start_download':
+    elif instruction == 'start':
         id = get_number('/> enter the id: ')
-        return ['start_download', id]
+        return ['start', id]
 
     elif instruction == 'delete':
         id = get_number('/> enter the id: ')
@@ -56,8 +56,8 @@ def get_input():
     elif instruction == 'clear_history':
         return ['clear_history']
 
-    elif instruction == 'download_list':
-        return ['download_list']
+    elif instruction == 'list':
+        return ['list']
 
     elif instruction == 'config':
         return ['config']
@@ -75,6 +75,9 @@ def get_input():
     elif instruction == 'reset_config':
         return ['reset_config']
 
+    elif instruction == 'cls':
+        return ['cls']
+
     elif instruction == 'exit':
         return ['exit']
     return [None]
@@ -82,17 +85,21 @@ def get_input():
 
 def run_the_insturction(inputs):
     if inputs[0] == 'new':
-        download_manager.downloading_thread(inputs[1], inputs[2], database.get_config()[2]
-                                            , database.get_config()[3], database.get_config()[4]
-                                            , database.get_config()[5], inputs[3])
+        download_manager.downloading_thread(inputs[1], inputs[2], database.get_config()[2], database.get_config()[3],
+                                            database.get_config()[4], database.get_config()[5], False)
 
-    elif inputs[0] == 'start_download':
+    elif inputs[0] == 'new_now':
+        download_manager.downloading_thread(inputs[1], inputs[2], datetime.now().hour, datetime.now().minute,
+                                            database.get_config()[4], database.get_config()[5], True)
+
+    elif inputs[0] == 'start':
         for thread in download_manager.downloading_thread.downloading_list:
             if inputs[1] == thread.id:
                 thread.run_thread()
 
     elif inputs[0] == 'speed':
-        download_manager.downloading_thread.speed()
+        print('please wait.')
+        print(download_manager.downloading_thread.speed(), 'MB/s')
 
     elif inputs[0] == 'delete':
         download_manager.downloading_thread.delte_by_id(inputs[1])
@@ -113,7 +120,7 @@ def run_the_insturction(inputs):
     elif inputs[0] == 'clear_history':
         database.clear_history()
 
-    elif inputs[0] == 'download_list':
+    elif inputs[0] == 'list':
         download_manager.downloading_thread.show_downloading_set()
 
     elif inputs[0] == 'config':
@@ -128,3 +135,6 @@ def run_the_insturction(inputs):
         database.reset_config()
         sys.stdout.flush()
         os.execv(sys.executable, [sys.executable, __file__] + sys.argv)
+
+    elif inputs[0] == 'cls':
+        os.system('cls')
