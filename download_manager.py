@@ -7,13 +7,39 @@ import database
 import cgi
 import os
 #_______________________________________________________________________________________________________________________
+def bool_between(start_hour, start_minute, end_hour, end_minute, now_hour, now_minute):
+    if start_hour != now_hour and end_hour != now_hour:
+        counter_hour = start_hour + 1
+        while(counter_hour != start_hour):
+            if counter_hour >= 24:
+                counter_hour = 0
+                continue
+            if counter_hour == now_hour:
+                return True
+            if counter_hour == end_hour:
+                return False
+            counter_hour += 1
+    if start_hour == now_hour:
+        return start_minute < now_minute
+    return end_minute < now_minute
 
-def remaining_time(hour, minute):
+
+def remaining_time(start_hour, start_minute, end_hour, end_minute, state):
+    # state, true -> start
+    # state, false -> end
     now = datetime.now()
-    temp = (datetime(1, 1, 1, hour, minute) - datetime(1, 1, 1, now.hour, now.minute)).total_seconds()
-    if temp >= 0:
-        return temp
-    return 0
+    if state:
+        if bool_between(start_hour, start_minute, end_hour, end_minute, now.hour, now.minute):
+            return 0
+        remaining = (datetime(1, 1, 1, start_hour, start_minute) - datetime(1, 1, 1, now.hour, now.minute)).total_seconds()
+        if remaining >= 0:
+            return remaining
+        return 86400 - (datetime(1, 1, 1, now.hour, now.minute) - datetime(1, 1, 1, start_hour, start_minute)).total_seconds()
+    remaining = (datetime(1, 1, 1, end_hour, end_minute) - datetime(1, 1, 1, now.hour, now.minute)).total_seconds()
+    if remaining >= 0:
+        return remaining
+    return 86400 - (datetime(1, 1, 1, now.hour, now.minute) - datetime(1, 1, 1, end_hour, end_minute)).total_seconds()
+
 
 class downloading_thread():
     ID = 0
@@ -43,10 +69,12 @@ class downloading_thread():
         if self.started:
             return
         self.stop_flag = False
-        self.download_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute), self.download)
+        self.download_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
+                                                    self.end_time_minute, True), self.download)
         self.download_thread.start()
-        self.kill_thread = Timer(remaining_time(self.end_time_hour, self.end_time_minute) + 2
-                                 , downloading_thread.terminate_dowload_procces_with_id, [self.id])
+        self.kill_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
+                                                self.end_time_minute, False) + 2
+                                 , downloading_thread.pause_dowload_with_id, [self.id])
         self.kill_thread.start()
 
     def download(self):
@@ -77,11 +105,16 @@ class downloading_thread():
                         file.write(chunk)
             except Exception as e:
                 print(e)
+        database.delete_download(self.url, self.location)
         downloading_thread.downloading_list.remove(self)
         if hasattr(self, 'kill_thread'):
             self.kill_thread.cancel()
         if downloading_thread.downloading_list:
             downloading_thread.downloading_list[0].run_thread()
+        elif database.get_config()[6]:
+            print('computer will shutdown in 5 secods...')
+            time.sleep(5)
+            os.system("shutdown /s /t 1")
 
     @classmethod
     def get_file_name(cls, request):
@@ -93,36 +126,39 @@ class downloading_thread():
 
     def cancel(self):
         self.started = False
-        if remaining_time(self.start_time_hour, self.start_time_minute) > 5:
+        if remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
+                          self.end_time_minute, False) > 5:
             if self.download_thread:
                 self.download_thread.cancel()
         else:
             self.stop_flag = True
         if hasattr(self, 'kill_thread'):
-            self.kill_thread.cancel()
+            if self.kill_thread:
+                self.kill_thread.cancel()
         print('killed')
 
     @classmethod
-    def terminate_dowload_procces_with_id(cls, id):
+    def pause_dowload_with_id(cls, id):
         for thread in downloading_thread.downloading_list:
             if id == thread.id:
                 thread.cancel()
                 return thread
 
     @classmethod
-    def terminate_all_downloads(cls):
+    def pause_all_downloads(cls):
         for thread in downloading_thread.downloading_list:
             thread.cancel()
 
     @classmethod
-    def delte_by_id(cls, id):
-        temp = downloading_thread.terminate_dowload_procces_with_id(id)
+    def delete_dowload_with_id(cls, id):
+        temp = downloading_thread.pause_dowload_with_id(id)
         if temp:
+            database.delete_download(temp.url, temp.location)
             downloading_thread.downloading_list.remove(temp)
 
     @classmethod
-    def delte_all(cls):
-        downloading_thread.terminate_all_downloads()
+    def delete_all_dowloads(cls):
+        downloading_thread.pause_all_downloads()
         downloading_thread.downloading_list.clear()
 
     @classmethod
@@ -136,7 +172,13 @@ class downloading_thread():
         return 0
 
     @classmethod
-    def show_downloading_set(cls):
+    def load_downloads_from_database(cls):
+        for download in database.get_all_downloads():
+            downloading_thread(download[0], download[1], database.get_config()[2], database.get_config()[3],
+                               database.get_config()[4], database.get_config()[5], False)
+
+    @classmethod
+    def show_downloading_list(cls):
         thread = None
         print('------------------------------------------------------------------------')
         for thread in downloading_thread.downloading_list:
@@ -149,8 +191,10 @@ class downloading_thread():
             except:
                 downloaded_size = 0
                 time_to_end = 0
-            print(thread.id, '\n', thread.file_name, '\n', thread.location, '\n', thread.size
-                  , '\n', '%', (downloaded_size/thread.size) * 100, '\n', time_to_end, 'min left', '\n', thread.started)
+
+            print(f'download id: {thread.id}\nfile name: {thread.file_name}\nlocation: {thread.location}\n'
+                  f'file size: {thread.size} MB\nprogress: %{(downloaded_size/thread.size) * 100}\n'
+                  f'remaining time: {time_to_end} min left\nstatus: {thread.started}')
             print('------------------------------------------------------------------------')
         if not thread:
             print('there is nothing to download.')
