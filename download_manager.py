@@ -122,7 +122,7 @@ class downloading_thread():
         if content_disposition and 'filename' in content_disposition:
             return cgi.parse_header(content_disposition)[1]['filename']
         else:
-            return request.url.rsplit("/", 1)[1]
+            return requests.utils.unquote(request.url.rsplit("/", 1)[1])
 
     def cancel(self):
         self.started = False
