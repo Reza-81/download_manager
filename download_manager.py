@@ -139,7 +139,7 @@ class downloading_thread():
         database.add_to_history(str(datetime.now()), self.file_name, self.url, self.location)
         # if a file already exists
         if Path(self.location + '/' + self.file_name).is_file():
-            print(self.url, ' resuming...')
+            print(self.file_name, 'resuming...')
             path = Path(self.location + '/' + self.file_name)
             resume_header = ({'Range': f'bytes={path.stat().st_size}-'})
             try:
@@ -153,7 +153,7 @@ class downloading_thread():
                 print(e)
         # new file
         else:
-            print(self.url, ' started...')
+            print(self.file_name, 'started...')
             try:
                 download_request = requests.get(self.url, stream=True)
                 with open(self.location + '/' + self.file_name, 'wb') as file:
@@ -170,8 +170,8 @@ class downloading_thread():
         if downloading_thread.downloading_list:
             downloading_thread.downloading_list[0].run_thread()
         elif database.get_config()[6]:
-            print('computer will shutdown in 5 secods...')
-            time.sleep(5)
+            print('computer will shutdown in 20 secods...')
+            time.sleep(20)
             os.system("shutdown /s /t 1")
     
     @classmethod
@@ -218,7 +218,7 @@ class downloading_thread():
             self.kill_thread.cancel()
         self.download_thread = None
         self.kill_thread = None
-        print('killed')
+        print(self.file_name, 'killed')
 
     @classmethod
     def pause_dowload_with_id(cls, id: int):
