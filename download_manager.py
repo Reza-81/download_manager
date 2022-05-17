@@ -57,8 +57,6 @@ class downloading_thread():
         size : int
             size of file
         location : str
-        started : bool
-            thread is started or not
         downloading_flag : bool
             download is started or not
         cancel_flag : bool
@@ -108,7 +106,6 @@ class downloading_thread():
         self.file_name = downloading_thread.get_file_name(temp_request)
         self.size = int(temp_request.headers.get('content-length')) * 0.000001
         self.location = location
-        self.started = False
         self.downloading_flag = False
         self.cancel_flag = False
         self.start_time_hour = start_time_hour
@@ -124,17 +121,15 @@ class downloading_thread():
     def run_thread(self):
         """run the download thread by set the start and kill thread for download.
         """
-        cancel_flag = False
-        if self.started:
-            return
-        self.started = True
-        self.download_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
-                                                    self.end_time_minute, True), self.download)
-        self.download_thread.start()
-        self.kill_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
-                                                self.end_time_minute, False) + 2
-                                 , downloading_thread.pause_dowload_with_id, [self.id])
-        self.kill_thread.start()
+        if self.download_thread == None:
+            self.cancel_flag = False
+            self.download_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
+                                                        self.end_time_minute, True), self.download)
+            self.download_thread.start()
+            self.kill_thread = Timer(remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
+                                                    self.end_time_minute, False) + 2
+                                    , downloading_thread.pause_dowload_with_id, [self.id])
+            self.kill_thread.start()
 
     def download(self):
         """this function downloads the file.
@@ -214,13 +209,15 @@ class downloading_thread():
         """
         self.downloading_flag = False
         if remaining_time(self.start_time_hour, self.start_time_minute, self.end_time_hour,
-                          self.end_time_minute, False) > 5:
+                          self.end_time_minute, True) > 2:
             if self.download_thread:
                 self.download_thread.cancel()
         else:
-            cancel_flag = True
+            self.cancel_flag = True
         if self.kill_thread:
             self.kill_thread.cancel()
+        self.download_thread = None
+        self.kill_thread = None
         print('killed')
 
     @classmethod
@@ -259,20 +256,16 @@ class downloading_thread():
         downloading_thread.pause_all_downloads()
         downloading_thread.downloading_list.clear()
 
-    @classmethod
-    def speed(cls) -> int:
+    def speed(self) -> int:
         """calculate download speed.
 
         Returns:
             int:
         """
-        for thread in downloading_thread.downloading_list:
-            if thread.started:
-                size_1 = os.path.getsize(thread.location + '/' + thread.file_name) * 0.000001
-                time.sleep(1)
-                size_2 = os.path.getsize(thread.location + '/' + thread.file_name) * 0.000001
-                return size_2 - size_1
-        return 0
+        size_1 = os.path.getsize(self.location + '/' + self.file_name) * 0.000001
+        time.sleep(1)
+        size_2 = os.path.getsize(self.location + '/' + self.file_name) * 0.000001
+        return size_2 - size_1
 
     @classmethod
     def load_downloads_from_database(cls):
@@ -291,8 +284,8 @@ class downloading_thread():
         for thread in downloading_thread.downloading_list:
             try:
                 downloaded_size = os.path.getsize(thread.location + '/' + thread.file_name) * 0.000001
-                if thread.started:
-                    time_to_end = ((thread.size - downloaded_size) / downloading_thread.speed()) / 60
+                if thread.downloading_flag:
+                    time_to_end = ((thread.size - downloaded_size) / thread.speed()) / 60
                 else:
                     time_to_end = 0
             except:

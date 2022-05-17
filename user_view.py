@@ -103,7 +103,16 @@ def user_command():
 
         case 'speed':
             print('please wait.')
-            print(download_manager.downloading_thread.speed(), 'MB/s')
+            average = 0
+            counter = 0
+            for thread in download_manager.downloading_thread.downloading_list:
+                if thread.downloading_flag:
+                    counter += 1
+                    average += thread.speed()
+            if counter:
+                print(average/counter, 'MB/s')
+            else:
+                print(0, 'MB/s')
 
         case 'cancel':
             id = get_number('/> enter the id: ')
@@ -121,11 +130,15 @@ def user_command():
             download_manager.downloading_thread.pause_all_downloads()
 
         case 'history':
+            i = None
             for i in database.get_all_history():
                 print(i)
+            if not i:
+                print('there is no history!')
 
         case 'clear_history':
             database.clear_history()
+            print('history cleared.')
 
         case 'list':
             download_manager.downloading_thread.show_downloading_list()
@@ -196,4 +209,4 @@ def user_command():
                 else:
                     print('your input is incorrect, please check.')
             except:
-                print('your inputs is incorrect, please check.')
+                print('your input is incorrect, please check.')
