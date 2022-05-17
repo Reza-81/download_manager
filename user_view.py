@@ -1,11 +1,16 @@
 import os
-import sys
 from datetime import datetime
 import database
 import download_manager
+import requests
 #-----------------------------------------------------------------------------------------------------------------------
 
-def get_number(text='', min_limite=float('-inf'), max_limite=float('inf')):
+def get_number(text: str = '', min_limite: int = float('-inf'), max_limite: int = float('inf')) -> int:
+    """get int number from user between given range.
+
+    Returns:
+        int
+    """
     while(True):
         number = input(text)
         if number == '':
@@ -18,221 +23,177 @@ def get_number(text='', min_limite=float('-inf'), max_limite=float('inf')):
         else:
             print('your input is incorrect. try again: ')
 
+def get_directory(text: str) -> str:
+    """get path and check. if the input was empty, return the path
+       that saved in database.
+    """
+    directory = input(text)
+    while(directory != ''):
+        if os.path.exists(directory):
+            return directory
+        print('your location is not exist. try again: ')
+        directory = input(text)
+    return database.get_config()[1]
 
-def get_input():
-    instruction = input('/> enter the insturction: ').lower()
+def user_command():
+    """get user commands
+    """
+    instruction = input('/> enter the insturction: ')
+    match instruction:
+        case 'help':
+            print(
+    '''\nThis is the set of instructions that you can use:
+        1) for start new download, just enter the url.
+        -----------------------------------------------------------
+        2) new_now: add new download and start it instantly.
+        -----------------------------------------------------------
+        3) list: show the downloads that add to download list.
+        -----------------------------------------------------------
+        4) start: you can start the specific download that added
+                in download list with download id.
+        -----------------------------------------------------------
+        5) speed: check the download speed.
+        -----------------------------------------------------------
+        6) pause: pause the download with download id. Note, the
+                download will not be deleted.
+        -----------------------------------------------------------
+        7) pause_all: pause the all downloads.
+        -----------------------------------------------------------
+        8) cancel: cancel and delete a download from download list
+                    with download id.
+        -----------------------------------------------------------
+        9) cancel_all: delete all downloads.
+        -----------------------------------------------------------
+        10) history: show the history of downloads.
+        -----------------------------------------------------------
+        11) clear_history: clear your history.
+        -----------------------------------------------------------
+        12) config: show the config.
+        -----------------------------------------------------------
+        13) location: change the directory of downloaded files.
+        -----------------------------------------------------------
+        14) start_timer: set start time for downloads.
+        -----------------------------------------------------------
+        15) end_timer: set end time for downloads.
+        -----------------------------------------------------------
+        16) shutdown: set computer to shutdown after finish all
+                    downloads.
+        -----------------------------------------------------------
+        17) set_config: you can set location, start and end time
+                        for all downloads.
+        -----------------------------------------------------------
+        18) reset_config: reset the config.
+        -----------------------------------------------------------
+        19) cls: clear the screen.
+        -----------------------------------------------------------
+        20) exit: exit form program.\n''')
 
-    if instruction == 'new' or instruction == 'new_now':
-        url = input('/> enter the url: ')
-        location = input('/> enter the location: ')
-        if location == '':
-            location = database.get_config()[1]
-        return [instruction, url, location]
+        case 'new_now':
+            url = input('/> enter the url: ')
+            location = get_directory('/> enter the location: ')
+            database.add_to_download(url, location)
+            download_manager.downloading_thread(url, location, datetime.now().hour, datetime.now().minute,
+                                                database.get_config()[4], database.get_config()[5], True)
 
-    elif instruction == 'speed':
-        return ['speed']
-
-    elif instruction == 'start':
-        id = get_number('/> enter the id: ')
-        return ['start', id]
-
-    elif instruction == 'puase':
-        id = get_number('/> enter the id: ')
-        return ['puase', id]
-
-    elif instruction == 'puase_all':
-        return ['puase_all']
-
-    elif instruction == 'cancel':
-        id = get_number('/> enter the id: ')
-        return ['cancel', id]
-
-    elif instruction == 'cancel_all':
-        return ['cancel_all']
-
-    elif instruction == 'history':
-        return ['history']
-
-    elif instruction == 'clear_history':
-        return ['clear_history']
-
-    elif instruction == 'list':
-        return ['list']
-
-    elif instruction == 'config':
-        return ['config']
-
-    elif instruction == 'location':
-        location = input('/> enter the location: ')
-        if location == '':
-            location = database.get_config()[1]
-        return ['location', location]
-
-    elif instruction == 'start_timer':
-        start_time_hour = get_number('/> enter the start time (hour): ', 0, 23)
-        start_time_minute = get_number('/> enter the start time (minute): ', 0, 59)
-        return ['start_timer', start_time_hour, start_time_minute]
-
-    elif instruction == 'end_timer':
-        end_time_hour = get_number('/> enter the end time (hour): ', 0, 23)
-        end_time_minute = get_number('/> enter the end time (minute): ', 0, 59)
-        return ['end_timer', end_time_hour, end_time_minute]
-
-    elif instruction == 'shutdown':
-        return ['shutdown']
-
-    elif instruction == 'set_config':
-        location = input('/> enter the location: ')
-        if location == '':
-            location = database.get_config()[1]
-        start_time_hour = get_number('/> enter the start time (hour): ', 0, 23)
-        start_time_minute = get_number('/> enter the start time (minute): ', 0, 59)
-        end_time_hour = get_number('/> enter the end time (hour): ', 0, 23)
-        end_time_minute = get_number('/> enter the end time (minute): ', 0, 59)
-        return ['set_config', location, start_time_hour, start_time_minute, end_time_hour, end_time_minute]
-
-    elif instruction == 'reset_config':
-        return ['reset_config']
-
-    elif instruction == 'cls':
-        return ['cls']
-
-    elif instruction == 'help':
-        return ['help']
-
-    elif instruction == 'exit':
-        return ['exit']
-    return [None]
-
-
-def run_the_insturction(inputs):
-    if inputs[0] == 'help':
-        print(
-'''\nThis is the set of instructions that you can use:
-     1) new: add new download to download list.
-     -----------------------------------------------------------
-     2) new_now: add new download and start it instantly.
-     -----------------------------------------------------------
-     3) list: show the downloads that add to download list.
-     -----------------------------------------------------------
-     4) start: you can start the specific download that added
-               in download list with download id.
-     -----------------------------------------------------------
-     5) speed: check the download speed.
-     -----------------------------------------------------------
-     6) pause: pause the download with download id. Note, the
-               download will not be deleted.
-     -----------------------------------------------------------
-     7) pause_all: pause the all downloads.
-     -----------------------------------------------------------
-     8) cancel: cancel and delete a download from download list
-                with download id.
-     -----------------------------------------------------------
-     9) cancel_all: delete all downloads.
-     -----------------------------------------------------------
-     10) history: show the history of downloads.
-     -----------------------------------------------------------
-     11) clear_history: clear your history.
-     -----------------------------------------------------------
-     12) config: show the config.
-     -----------------------------------------------------------
-     13) location: change the directory of downloaded files.
-     -----------------------------------------------------------
-     14) start_timer: set start time for downloads.
-     -----------------------------------------------------------
-     15) end_timer: set end time for downloads.
-     -----------------------------------------------------------
-     16) shutdown: set computer to shutdown after finish all
-                   downloads.
-     -----------------------------------------------------------
-     17) set_config: you can set location, start and end time
-                     for all downloads.
-     -----------------------------------------------------------
-     18) reset_config: reset the config.
-     -----------------------------------------------------------
-     19) cls: clear the screen.
-     -----------------------------------------------------------
-     20) exit: exit form program.\n''')
-
-    elif inputs[0] == 'new':
-        database.add_to_download(inputs[1], inputs[2])
-        download_manager.downloading_thread(inputs[1], inputs[2], database.get_config()[2], database.get_config()[3],
-                                            database.get_config()[4], database.get_config()[5], False)
-
-    elif inputs[0] == 'new_now':
-        database.add_to_download(inputs[1], inputs[2])
-        download_manager.downloading_thread(inputs[1], inputs[2], datetime.now().hour, datetime.now().minute,
-                                            database.get_config()[4], database.get_config()[5], True)
-
-    elif inputs[0] == 'start':
-        for thread in download_manager.downloading_thread.downloading_list:
-            if inputs[1] == thread.id:
+        case 'start':
+            id = get_number('/> enter the id: ')
+            thread = download_manager.downloading_thread.search_thread(id)
+            if thread:
                 thread.run_thread()
 
-    elif inputs[0] == 'speed':
-        print('please wait.')
-        print(download_manager.downloading_thread.speed(), 'MB/s')
+        case 'speed':
+            print('please wait.')
+            print(download_manager.downloading_thread.speed(), 'MB/s')
 
-    elif inputs[0] == 'cancel':
-        download_manager.downloading_thread.delete_dowload_with_id(inputs[1])
+        case 'cancel':
+            id = get_number('/> enter the id: ')
+            download_manager.downloading_thread.delete_dowload_with_id(id)
 
-    elif inputs[0] == 'cancel_all':
-        download_manager.downloading_thread.delete_all_dowloads()
-        database.delete_all_downloads()
+        case 'cancel_all':
+            download_manager.downloading_thread.delete_all_dowloads()
+            database.delete_all_downloads()
 
-    elif inputs[0] == 'puase':
-        download_manager.downloading_thread.pause_dowload_with_id(inputs[1])
+        case 'puase':
+            id = get_number('/> enter the id: ')
+            download_manager.downloading_thread.pause_dowload_with_id(id)
 
-    elif inputs[0] == 'puase_all':
-        download_manager.downloading_thread.pause_all_downloads()
+        case 'puase_all':
+            download_manager.downloading_thread.pause_all_downloads()
 
-    elif inputs[0] == 'history':
-        for i in database.get_all_history():
-            print(i)
+        case 'history':
+            for i in database.get_all_history():
+                print(i)
 
-    elif inputs[0] == 'clear_history':
-        database.clear_history()
+        case 'clear_history':
+            database.clear_history()
 
-    elif inputs[0] == 'list':
-        download_manager.downloading_thread.show_downloading_list()
+        case 'list':
+            download_manager.downloading_thread.show_downloading_list()
 
-    elif inputs[0] == 'config':
-        print(database.get_config())
+        case 'config':
+            print(database.get_config())
 
-    elif inputs[0] == 'location':
-        database.set_location(inputs[1])
-        download_manager.downloading_thread.delete_all_dowloads()
-        download_manager.downloading_thread.load_downloads_from_database()
+        case 'location':
+            location = get_directory('/> enter the location: ')
+            database.set_location(location)
+            download_manager.downloading_thread.delete_all_dowloads()
+            download_manager.downloading_thread.load_downloads_from_database()
 
-    elif inputs[0] == 'start_timer':
-        database.set_start_time(inputs[1], inputs[2])
-        download_manager.downloading_thread.delete_all_dowloads()
-        download_manager.downloading_thread.load_downloads_from_database()
+        case 'start_timer':
+            start_time_hour = get_number('/> enter the start time (hour): ', 0, 23)
+            start_time_minute = get_number('/> enter the start time (minute): ', 0, 59)
+            database.set_start_time(start_time_hour, start_time_minute)
+            download_manager.downloading_thread.delete_all_dowloads()
+            download_manager.downloading_thread.load_downloads_from_database()
 
-    elif inputs[0] == 'end_timer':
-        database.set_end_time(inputs[1], inputs[2])
-        download_manager.downloading_thread.delete_all_dowloads()
-        download_manager.downloading_thread.load_downloads_from_database()
+        case 'end_timer':
+            end_time_hour = get_number('/> enter the end time (hour): ', 0, 23)
+            end_time_minute = get_number('/> enter the end time (minute): ', 0, 59)
+            database.set_end_time(end_time_hour, end_time_minute)
+            download_manager.downloading_thread.delete_all_dowloads()
+            download_manager.downloading_thread.load_downloads_from_database()
 
-    elif inputs[0] == 'shutdown':
-        shutdown = database.get_config()[-1]
-        if shutdown:
-            print('shutdown is OFF.')
-            shutdown = 0
-        else:
-            print('shutdown is ON.')
-            shutdown = 1
-        database.set_shutdown_boolean(shutdown)
+        case 'shutdown':
+            shutdown = database.get_config()[-1]
+            if shutdown:
+                print('shutdown is OFF.')
+                shutdown = 0
+            else:
+                print('shutdown is ON.')
+                shutdown = 1
+            database.set_shutdown_boolean(shutdown)
 
-    elif inputs[0] == 'set_config':
-        database.set_config(inputs[1], inputs[2], inputs[3], inputs[4], inputs[5])
-        download_manager.downloading_thread.delete_all_dowloads()
-        download_manager.downloading_thread.load_downloads_from_database()
+        case 'set_config':
+            location = get_directory('/> enter the location: ')
+            start_time_hour = get_number('/> enter the start time (hour): ', 0, 23)
+            start_time_minute = get_number('/> enter the start time (minute): ', 0, 59)
+            end_time_hour = get_number('/> enter the end time (hour): ', 0, 23)
+            end_time_minute = get_number('/> enter the end time (minute): ', 0, 59)
+            database.set_config(location, start_time_hour, start_time_minute, end_time_hour, end_time_minute)
+            download_manager.downloading_thread.delete_all_dowloads()
+            download_manager.downloading_thread.load_downloads_from_database()
 
-    elif inputs[0] == 'reset_config':
-        database.reset_config()
-        download_manager.downloading_thread.delete_all_dowloads()
-        download_manager.downloading_thread.load_downloads_from_database()
+        case 'reset_config':
+            database.reset_config()
+            download_manager.downloading_thread.delete_all_dowloads()
+            download_manager.downloading_thread.load_downloads_from_database()
 
-    elif inputs[0] == 'cls':
-        os.system('cls')
+        case 'cls':
+            os.system('cls')
+        
+        case 'exit':
+            download_manager.downloading_thread.pause_all_downloads()
+            return -1
+        
+        case _:
+            url = instruction
+            try:
+                if requests.get(url, stream=True).headers.get('content-length'):
+                    location = get_directory('/> enter the location: ')
+                    database.add_to_download(url, location)
+                    download_manager.downloading_thread(url, location, database.get_config()[2], database.get_config()[3],
+                                                        database.get_config()[4], database.get_config()[5], False)
+                else:
+                    print('your input is incorrect, please check.')
+            except:
+                print('your inputs is incorrect, please check.')
