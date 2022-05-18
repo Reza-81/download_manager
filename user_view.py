@@ -35,6 +35,12 @@ def get_directory(text: str) -> str:
         directory = input(text)
     return database.get_config()[1]
 
+def check_url(url: str) -> bool:
+    try:
+        return requests.get(url, stream=True).headers.get('content-length')
+    except:
+        return False
+
 def user_command():
     """get user commands
     """
@@ -90,10 +96,13 @@ def user_command():
 
         case 'new_now':
             url = input('/> enter the url: ')
-            location = get_directory('/> enter the location: ')
-            database.add_to_download(url, location)
-            download_manager.downloading_thread(url, location, datetime.now().hour, datetime.now().minute,
-                                                database.get_config()[4], database.get_config()[5], True)
+            if check_url(url):
+                location = get_directory('/> enter the location: ')
+                database.add_to_download(url, location)
+                download_manager.downloading_thread(url, location, datetime.now().hour, datetime.now().minute,
+                                                    database.get_config()[4], database.get_config()[5], True)
+            else:
+                print('your input is incorrect, please check.')
 
         case 'start':
             id = get_number('/> enter the id: ')
@@ -200,13 +209,10 @@ def user_command():
         
         case _:
             url = instruction
-            try:
-                if requests.get(url, stream=True).headers.get('content-length'):
-                    location = get_directory('/> enter the location: ')
-                    database.add_to_download(url, location)
-                    download_manager.downloading_thread(url, location, database.get_config()[2], database.get_config()[3],
+            if check_url(url):
+                location = get_directory('/> enter the location: ')
+                database.add_to_download(url, location)
+                download_manager.downloading_thread(url, location, database.get_config()[2], database.get_config()[3],
                                                         database.get_config()[4], database.get_config()[5], False)
-                else:
-                    print('your input is incorrect, please check.')
-            except:
+            else:
                 print('your input is incorrect, please check.')
