@@ -1,5 +1,4 @@
 import user_view
-import sys
 import download_manager
 
 def main():

@@ -98,7 +98,7 @@ def user_command():
             url = input('/> enter the url: ')
             if check_url(url):
                 location = get_directory('/> enter the location: ')
-                database.add_to_download(url, location)
+                database.add_to_download(url, location, 1)
                 download_manager.downloading_thread(url, location, datetime.now().hour, datetime.now().minute,
                                                     database.get_config()[4], database.get_config()[5], True)
             else:
@@ -211,7 +211,7 @@ def user_command():
             url = instruction
             if check_url(url):
                 location = get_directory('/> enter the location: ')
-                database.add_to_download(url, location)
+                database.add_to_download(url, location, 0)
                 download_manager.downloading_thread(url, location, database.get_config()[2], database.get_config()[3],
                                                         database.get_config()[4], database.get_config()[5], False)
             else:

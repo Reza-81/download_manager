@@ -272,8 +272,12 @@ class downloading_thread():
         """load downloads form database when program is ran.
         """
         for download in database.get_all_downloads():
-            downloading_thread(download[0], download[1], database.get_config()[2], database.get_config()[3],
-                               database.get_config()[4], database.get_config()[5], False)
+            if download[2]:
+                downloading_thread(download[0], download[1], datetime.now().hour, datetime.now().minute,
+                                   database.get_config()[4], database.get_config()[5], True)
+            else:
+                downloading_thread(download[0], download[1], database.get_config()[2], database.get_config()[3],
+                                   database.get_config()[4], database.get_config()[5], False)
 
     @classmethod
     def show_downloading_list(cls):

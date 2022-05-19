@@ -82,17 +82,17 @@ def get_config():
 def create_download_table():
     connection = sqlite3.connect('Database.db')
     with connection:
-        connection.execute('''CREATE TABLE IF NOT EXISTS download (url TEXT, location TEXT);''')
+        connection.execute('''CREATE TABLE IF NOT EXISTS download (url TEXT, location TEXT, force_to_run INTEGER);''')
 
 def get_all_downloads():
     connection = sqlite3.connect('Database.db')
     with connection:
         return connection.execute('SELECT * FROM download;').fetchall()
 
-def add_to_download(url, location):
+def add_to_download(url, location, force_to_run):
     connection = sqlite3.connect('Database.db')
     with connection:
-        connection.execute('INSERT INTO download (url, location) VALUES (?, ?);', (url, location))
+        connection.execute('''INSERT INTO download (url, location, force_to_run) VALUES (?, ?, ?);''', (url, location, force_to_run))
 
 def delete_download(url, location):
     connection = sqlite3.connect('Database.db')
