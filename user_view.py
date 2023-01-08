@@ -45,6 +45,7 @@ def user_command():
     """get user commands
     """
     instruction = input('/> enter the insturction: ')
+    os.system('cls')
     match instruction:
         case 'help':
             print(
@@ -111,7 +112,7 @@ def user_command():
                 thread.run_thread()
 
         case 'speed':
-            print('please wait.')
+            print('please wait...')
             average = 0
             counter = 0
             for thread in download_manager.downloading_thread.downloading_list:
@@ -119,7 +120,7 @@ def user_command():
                     counter += 1
                     average += thread.speed()
             if counter:
-                print(average/counter, 'MB/s')
+                print(round(average/counter, 1), 'MB/s')
             else:
                 print(0, 'MB/s')
 
@@ -140,10 +141,17 @@ def user_command():
 
         case 'history':
             i = None
+            print('------------------------------------------------------------------------')
             for i in database.get_all_history():
-                print(i)
+                print(f' Id: {i[0]}')
+                print(f' Date: {i[1]}')
+                print(f' File name: {i[2]}')
+                print(f' File url: {i[3]}')
+                print(f' File location: {i[4]}')
+                print('------------------------------------------------------------------------')
             if not i:
                 print('there is no history!')
+                print('------------------------------------------------------------------------')
 
         case 'clear_history':
             database.clear_history()

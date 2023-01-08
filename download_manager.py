@@ -136,7 +136,7 @@ class downloading_thread():
         """
         self.downloading_flag = True
         chunk_length = 0.032768 # 32 * 1024 mega byte
-        database.add_to_history(str(datetime.now()), self.file_name, self.url, self.location)
+        database.add_to_history(str(datetime.now()).split('.')[0], self.file_name, self.url, self.location)
         # if a file already exists
         if Path(self.location + '/' + self.file_name).is_file():
             print(self.file_name, 'resuming...')
@@ -200,9 +200,9 @@ class downloading_thread():
         """
         content_disposition = request.headers.get('Content-Disposition')
         if content_disposition and 'filename' in content_disposition:
-            return cgi.parse_header(content_disposition)[1]['filename']
+            return cgi.parse_header(content_disposition)[1]['filename'].replace('<', '').replace('>', '').replace(':', '').replace('"', '').replace('/', '').replace('\\', '').replace('|', '').replace('?', '').replace('*', '')
         else:
-            return requests.utils.unquote(request.url.rsplit("/", 1)[1])
+            return requests.utils.unquote(request.url.rsplit("/", 1)[1]).replace('<', '').replace('>', '').replace(':', '').replace('"', '').replace('/', '').replace('\\', '').replace('|', '').replace('?', '').replace('*', '')
 
     def cancel(self):
         """cancel the downloading process.
@@ -289,16 +289,16 @@ class downloading_thread():
             try:
                 downloaded_size = os.path.getsize(thread.location + '/' + thread.file_name) * 0.000001
                 if thread.downloading_flag:
-                    time_to_end = ((thread.size - downloaded_size) / thread.speed()) / 60
+                    time_to_end = ((thread.size - downloaded_size) / thread.speed()) // 60
                 else:
                     time_to_end = 0
             except:
                 downloaded_size = 0
                 time_to_end = 0
 
-            print(f'download id: {thread.id}\nfile name: {thread.file_name}\nlocation: {thread.location}\n'
-                  f'file size: {thread.size} MB\nprogress: %{(downloaded_size/thread.size) * 100}\n'
-                  f'remaining time: {time_to_end} min left\nstatus: {thread.downloading_flag}')
+            print(f'Download id: {thread.id}\nFile name: {thread.file_name}\nLocation: {thread.location}\n'
+                  f'File size: {thread.size} MB\nProgress: %{(downloaded_size/thread.size) * 100}\n'
+                  f'Remaining time: {time_to_end} min left\nStatus: {thread.downloading_flag}')
             print('------------------------------------------------------------------------')
         if not thread:
             print('there is nothing to download.')
