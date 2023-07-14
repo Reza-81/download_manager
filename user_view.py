@@ -31,7 +31,17 @@ def get_directory(text: str) -> str:
     while(directory != ''):
         if os.path.exists(directory):
             return directory
-        print('your location is not exist. try again: ')
+        try:
+            os.makedirs(database.get_config()[1] + '\\' + directory)
+            print('your directory has been created.')
+            return database.get_config()[1] + '\\' + directory
+        except:
+            try:
+                os.makedirs(directory)
+                print('your directory has been created.')
+                return directory
+            except:
+                print('the path is incorrect. try again: ')
         directory = input(text)
     return database.get_config()[1]
 
