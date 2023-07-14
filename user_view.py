@@ -31,6 +31,8 @@ def get_directory(text: str) -> str:
     while(directory != ''):
         if os.path.exists(directory):
             return directory
+        if os.path.exists(database.get_config()[1] + '\\' + directory):
+            return database.get_config()[1] + '\\' + directory
         try:
             os.makedirs(database.get_config()[1] + '\\' + directory)
             print('your directory has been created.')
